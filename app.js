@@ -15,12 +15,14 @@ const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rho
 const app = express();
 
 let posts = []
-let postNames = []
+// let postNames = []
 
-// const blogSchema = new mongoose.Schema({
-//     title: String,
-//     postContent: String
-// });
+const blogSchema = new mongoose.Schema({
+    title: String,
+    content: String
+});
+
+let postContent = mongoose.model("posts", blogSchema);
 
 app.set('view engine', 'ejs');
 
@@ -28,11 +30,15 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public"));
 
 app.get("/", function(req, res){
-	res.render("home",{
-		startingContent : homeStartingContent,
-		posts: posts
-	});
-	console.log(posts);
+    postContent.find({}).then(function(foundFile){
+        res.render("home",{
+            startingContent : homeStartingContent,
+            posts: foundFile
+        });
+        // console.log("found file = ",foundFile[0].title);
+    }).catch(function(err){
+        console.log(err);
+    });
 });
 
 app.get("/about", function(req, res){
@@ -47,45 +53,56 @@ app.get("/compose", function(req, res){
 	res.render("compose");
 });
 
-app.get("/posts/:postName", function(req, res){
-	console.log(req.params.postName);
-	let requestedPostName = _.lowerCase(req.params.postName);
-	console.log("req name = ",requestedPostName);
+app.get("/posts/:postId", function(req, res){
+	// console.log(req.params.postName);
+	let requestedPostId = req.params.postId;
+	// console.log("req name = ",requestedPostName);
 
 	// console.log(posts.title);
-	posts.forEach(function(element){
-		if (_.lowerCase(element.title) == requestedPostName){
-			// console.log("match found");
-			// let temp = element.body;
-			// temp = temp.substring(0,50);
-			res.render("post",{
-				
-				postTitle: element.title,
-				postContent: element.body
+
+    postContent.findById(requestedPostId).then(function(foundFile){
+        if (foundFile) {
+            res.render("post",{
+				postTitle: foundFile.title,
+				postContent: foundFile.content
 			});
-		}
-	});
+        }
+    }).catch(function(err){
+        console.log(err);
+    });
+
+	// posts.forEach(function(element){
+	// 	if (_.lowerCase(element.title) == requestedPostName){
+	// 		// console.log("match found");
+	// 		// let temp = element.body;
+	// 		// temp = temp.substring(0,50);
+	// 		res.render("post",{
+				
+	// 			postTitle: element.title,
+	// 			postContent: element.content
+	// 		});
+	// 	}
+	// });
 
 });
 
 
-
 app.post("/compose", function(req, res){
-	const post = {
-		title: req.body.postTitle, 
-		body: req.body.postBody
-	};
+    // get the title and content from the compose page
+    const postData = new postContent({
+        title: req.body.postTitle,
+        content: req.body.postBody
+    });
 
-	posts.push(post);
-
-	res.redirect("/");
-	// console.log(post);
+    // save the gatherd data to the database
+    postData.save().then(function(){
+        res.redirect("/");
+    }).catch(function(err){
+        console.log(err);
+    });
 });
 
 app.listen(3000, function() {
   console.log("Server started on port 3000");
 });
-
-
-
 
